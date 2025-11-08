@@ -137,7 +137,15 @@ func asyncPostWebAction(errChan chan error, url string, body []byte, headers map
 		return
 	}
 
-	// Gestione dello stato HTTP
+	// We need to handle status in the range from 200 to 299
+	// as success, and everything else as an error.
+	// In particular, we need to handle 202 Accepted
+	// as a success, because the action is invoked
+	// asynchronously and the response is not available yet.
+	// We also need to handle 204 No Content as a success,
+	// because the action is invoked and there is no response.
+	// It seems that the invoker is releasing a 202 Accepted
+	// after 60 seconds, so we need to handle that as well.
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		errChan <- fmt.Errorf("not ok (%s)", httpResp.Status)
 	} else {
